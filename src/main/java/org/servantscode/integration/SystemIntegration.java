@@ -1,11 +1,12 @@
 package org.servantscode.integration;
 
+import java.util.Collections;
 import java.util.Map;
 
 public class SystemIntegration {
     private int id;
     private String name;
-    private Map<String, String> config;
+    private Map<String, String> config = Collections.emptyMap();
 
     // ----- Accessors -----
     public int getId() { return id; }

@@ -1,12 +1,19 @@
 package org.servantscode.integration.pushpay;
 
 import org.servantscode.integration.IntegrationConfiguration;
+import org.servantscode.integration.pushpay.client.PushpayServiceClient;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class PushpayClientConfiguration extends IntegrationConfiguration {
     private String refreshToken;
+
+    public PushpayClientConfiguration() {}
+
+    public PushpayClientConfiguration(Map<String, String> config) {
+        setConfiguration(config);
+    }
 
     @Override
     public void setConfiguration(Map<String, String> configuration) {
