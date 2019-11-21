@@ -4,9 +4,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.servantscode.commons.rest.SCServiceBase;
 import org.servantscode.commons.security.OrganizationContext;
-import org.servantscode.integration.OrganizationIntegration;
+import org.servantscode.integration.Integration;
 import org.servantscode.integration.SystemIntegration;
-import org.servantscode.integration.db.OrganizationIntegrationDB;
+import org.servantscode.integration.db.IntegrationDB;
 import org.servantscode.integration.db.SystemIntegrationDB;
 import org.servantscode.integration.donation.RecordDonationProcess;
 import org.servantscode.integration.pushpay.PushpayClientConfiguration;
@@ -17,13 +17,16 @@ import org.servantscode.integration.pushpay.dao.GetPaymentsResponse;
 import org.servantscode.integration.pushpay.dao.PushPayOrganization;
 import org.servantscode.integration.pushpay.dao.PushPayPayment;
 
+import javax.validation.constraints.Null;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import java.time.ZonedDateTime;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Function;
 
 @Path("/integration/pushpay")
 public class PushpaySvc extends SCServiceBase {
@@ -31,41 +34,46 @@ public class PushpaySvc extends SCServiceBase {
 
     private static final Logger LOG = LogManager.getLogger(PushpaySvc.class);
 
-    private OrganizationIntegrationDB orgIntDb;
+    private IntegrationDB orgIntDb;
     private SystemIntegrationDB sysIntDb;
 
     public PushpaySvc() {
-        this.orgIntDb = new OrganizationIntegrationDB();
+        this.orgIntDb = new IntegrationDB();
         this.sysIntDb = new SystemIntegrationDB();
     }
-
-    @GET @Path("/organization") @Produces(MediaType.APPLICATION_JSON)
-    public List<PushPayOrganization> getOrgs() {
-
-        PushpayServiceClient client = configureClient();
-
-        GetOrganizationsResponse resp = client.getOrganizations();
-        return resp.getItems();
-    }
-
-    @GET @Path("/payment") @Produces(MediaType.APPLICATION_JSON)
-    public List<PushPayPayment> getPayments() {
-
-        PushpayServiceClient client = configureClient();
-
-        List<PushPayOrganization> orgs = client.getOrganizations().getItems();
-        List<PushPayPayment> payments = new LinkedList<>();
-        for(PushPayOrganization org: orgs) {
-            GetPaymentsResponse resp = client.getPayments(org.getKey());
-            payments.addAll(resp.getItems());
-        }
-        return payments;
-    }
+//
+//    @GET @Path("/organization") @Produces(MediaType.APPLICATION_JSON)
+//    public List<PushPayOrganization> getOrgs() {
+//
+//        PushpayServiceClient client = configureClient();
+//
+//        GetOrganizationsResponse resp = client.getOrganizations();
+//        return resp.getItems();
+//    }
+//
+//    @GET @Path("/payment") @Produces(MediaType.APPLICATION_JSON)
+//    public List<PushPayPayment> getPayments() {
+//
+//        PushpayServiceClient client = configureClient();
+//
+//        List<PushPayOrganization> orgs = client.getOrganizations().getItems();
+//        List<PushPayPayment> payments = new LinkedList<>();
+//        for(PushPayOrganization org: orgs) {
+//            GetPaymentsResponse resp = client.getPayments(org.getKey());
+//            payments.addAll(resp.getItems());
+//        }
+//        return payments;
+//    }
 
     @POST @Path("/payment/sync") @Produces(MediaType.APPLICATION_JSON)
     public void syncPayments() {
 
-        PushpayServiceClient client = configureClient();
+        String orgName = OrganizationContext.getOrganization().getHostName();
+        Integration orgInt = orgIntDb.getIntegration(PUSH_PAY, orgName);
+        orgInt.setLastSync(ZonedDateTime.now());
+        orgIntDb.update(orgInt);
+
+        PushpayServiceClient client = configureClient(orgInt);
 
         List<PushPayOrganization> orgs = client.getOrganizations().getItems();
         List<PushPayPayment> payments = new LinkedList<>();
@@ -77,16 +85,17 @@ public class PushpaySvc extends SCServiceBase {
         RecordDonationProcess proc = new RecordDonationProcess(payments, OrganizationContext.getOrganization());
         //TODO: Async this.
         proc.run();
-
     }
 
     // ----- Private -----
-    private PushpayServiceClient configureClient() {
-        String orgName = OrganizationContext.getOrganization().getHostName();
+    private PushpayServiceClient configureClient(Integration orgInt) {
         SystemIntegration sysInt = sysIntDb.getSystemIntegrationByName(PUSH_PAY);
-        OrganizationIntegration orgInt = orgIntDb.getOrganizationIntegration(PUSH_PAY, orgName);
 
         return new PushpayServiceClient(new PushpaySystemConfiguration(sysInt.getConfig()),
-                new PushpayClientConfiguration(orgInt.getConfig()));
+                                        new PushpayClientConfiguration(orgInt.getConfig()),
+                                        (String refreshToken) -> {
+                                            orgInt.getConfig().put("refreshToken", refreshToken);
+                                            orgIntDb.update(orgInt);
+                                        });
     }
 }

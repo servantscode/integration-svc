@@ -48,7 +48,7 @@ public class PushPayPayment {
     public void setStatus(String status) { this.status = status; }
 
     public String getTransactionId() { return transactionId; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = "PushPay:" + transactionId; }
 
     public String getPaymentToken() { return paymentToken; }
     public void setPaymentToken(String paymentToken) { this.paymentToken = paymentToken; }

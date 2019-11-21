@@ -11,7 +11,7 @@ import org.servantscode.commons.search.InsertBuilder;
 import org.servantscode.commons.search.QueryBuilder;
 import org.servantscode.commons.search.UpdateBuilder;
 import org.servantscode.commons.security.OrganizationContext;
-import org.servantscode.integration.OrganizationIntegration;
+import org.servantscode.integration.Integration;
 
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -19,13 +19,13 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
-public class OrganizationIntegrationDB extends EasyDB<OrganizationIntegration> {
-    private static final Logger LOG = LogManager.getLogger(OrganizationIntegrationDB.class);
+public class IntegrationDB extends EasyDB<Integration> {
+    private static final Logger LOG = LogManager.getLogger(IntegrationDB.class);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public OrganizationIntegrationDB() {
-        super(OrganizationIntegration.class, "name");
+    public IntegrationDB() {
+        super(Integration.class, "name");
     }
 
     private QueryBuilder query(QueryBuilder selection) {
@@ -45,18 +45,18 @@ public class OrganizationIntegrationDB extends EasyDB<OrganizationIntegration> {
         return getCount(query(count()).search(searchParser.parse(search)).inOrg());
     }
 
-    public OrganizationIntegration getOrganizationIntegration(String integrationName, String orgPrefix) {
+    public Integration getIntegration(String integrationName, String orgPrefix) {
         return getOne(query(selectData()).with("si.name", integrationName).with("host_name", orgPrefix));
     }
 
-    public OrganizationIntegration getOrganizationIntegration(int id) {
+    public Integration getIntegration(int id) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot query org integrations outside of org context");
 
         return getOne(query(selectData()).with("oi.id", id).inOrg());
     }
 
-    public List<OrganizationIntegration> getOrganizationIntegrations(String search, String sortField, int start, int count) {
+    public List<Integration> getIntegrations(String search, String sortField, int start, int count) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot query org integrations outside of org context");
 
@@ -65,27 +65,31 @@ public class OrganizationIntegrationDB extends EasyDB<OrganizationIntegration> {
         return get(query);
     }
 
-    public OrganizationIntegration create(OrganizationIntegration organizationIntegration) {
+    public Integration create(Integration integration) {
         InsertBuilder cmd = insertInto("org_integrations")
-                .value("system_integration_id", organizationIntegration.getSystemIntegrationId())
-                .value("config", toEncryptedString(organizationIntegration.getConfig()))
-                .value("org_id", organizationIntegration.getOrgId());
+                .value("system_integration_id", integration.getSystemIntegrationId())
+                .value("config", toEncryptedString(integration.getConfig()))
+                .value("failure", integration.getFailure())
+                .value("last_sync", integration.getLastSync())
+                .value("org_id", integration.getOrgId());
         if(!create(cmd))
-            throw new RuntimeException("Could not create organizationIntegration record");
-        return organizationIntegration;
+            throw new RuntimeException("Could not create integration record");
+        return integration;
     }
 
-    public OrganizationIntegration updateOrganizationIntegration(OrganizationIntegration organizationIntegration) {
+    public Integration update(Integration integration) {
         UpdateBuilder cmd = update("org_integrations")
-                .value("config", toEncryptedString(organizationIntegration.getConfig()))
-                .withId(organizationIntegration.getId())
-                .with("org_id", organizationIntegration.getOrgId());
+                .value("config", toEncryptedString(integration.getConfig()))
+                .value("failure", integration.getFailure())
+                .value("last_sync", integration.getLastSync())
+                .withId(integration.getId())
+                .with("org_id", integration.getOrgId());
         if(!update(cmd))
-            throw new RuntimeException("Could not update organizationIntegration record");
-        return organizationIntegration;
+            throw new RuntimeException("Could not update integration record");
+        return integration;
     }
 
-    public boolean deleteOrganizationIntegration(int id) {
+    public boolean deleteIntegration(int id) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot delete an org integration outside of org context");
         return delete(deleteFrom("org_integrations").withId(id).inOrg());
@@ -93,14 +97,16 @@ public class OrganizationIntegrationDB extends EasyDB<OrganizationIntegration> {
 
     // ----- Private -----
     @Override
-    protected OrganizationIntegration processRow(ResultSet rs) throws SQLException {
-        OrganizationIntegration organizationIntegration = new OrganizationIntegration();
-        organizationIntegration.setId(rs.getInt("id"));
-        organizationIntegration.setSystemIntegrationId(rs.getInt("system_integration_id"));
-        organizationIntegration.setName(rs.getString("name"));
-        organizationIntegration.setConfig(fromEncryptedString(rs.getString("config")));
-        organizationIntegration.setOrgId(rs.getInt("org_id"));
-        return organizationIntegration;
+    protected Integration processRow(ResultSet rs) throws SQLException {
+        Integration i = new Integration();
+        i.setId(rs.getInt("id"));
+        i.setSystemIntegrationId(rs.getInt("system_integration_id"));
+        i.setName(rs.getString("name"));
+        i.setFailure(rs.getString("failure"));
+        i.setLastSync(convert(rs.getTimestamp("last_sync")));
+        i.setConfig(fromEncryptedString(rs.getString("config")));
+        i.setOrgId(rs.getInt("org_id"));
+        return i;
     }
 
     private static String toEncryptedString(Map<String, String> data) {

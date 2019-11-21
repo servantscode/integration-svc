@@ -5,23 +5,16 @@ import org.apache.logging.log4j.Logger;
 import org.servantscode.commons.Organization;
 import org.servantscode.commons.db.OrganizationDB;
 import org.servantscode.commons.rest.SCServiceBase;
-import org.servantscode.commons.security.OrganizationContext;
-import org.servantscode.integration.OrganizationIntegration;
+import org.servantscode.integration.Integration;
 import org.servantscode.integration.SystemIntegration;
-import org.servantscode.integration.db.OrganizationIntegrationDB;
+import org.servantscode.integration.db.IntegrationDB;
 import org.servantscode.integration.db.SystemIntegrationDB;
-import org.servantscode.integration.pushpay.PushpayClientConfiguration;
 import org.servantscode.integration.pushpay.PushpaySystemConfiguration;
 import org.servantscode.integration.pushpay.client.PushpayAuthClient;
-import org.servantscode.integration.pushpay.client.PushpayServiceClient;
-import org.servantscode.integration.pushpay.dao.GetOrganizationsResponse;
-import org.servantscode.integration.pushpay.dao.PushPayOrganization;
 
 import javax.ws.rs.*;
-import javax.ws.rs.core.MediaType;
 import java.net.URI;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -34,12 +27,12 @@ public class PushpayCallbackSvc extends SCServiceBase {
 
     private static final Logger LOG = LogManager.getLogger(PushpayCallbackSvc.class);
 
-    private OrganizationIntegrationDB orgIntDb;
+    private IntegrationDB orgIntDb;
     private SystemIntegrationDB sysIntDb;
     private OrganizationDB orgDb;
 
     public PushpayCallbackSvc() {
-        this.orgIntDb = new OrganizationIntegrationDB();
+        this.orgIntDb = new IntegrationDB();
         this.sysIntDb = new SystemIntegrationDB();
         this.orgDb = new OrganizationDB();
     }
@@ -78,16 +71,16 @@ public class PushpayCallbackSvc extends SCServiceBase {
         Map<String, String> config = new HashMap<>(2);
         config.put("refreshToken", refreshToken);
 
-        OrganizationIntegration existingInt = orgIntDb.getOrganizationIntegration(PUSH_PAY, "orgPrefix");
+        Integration existingInt = orgIntDb.getIntegration(PUSH_PAY, "orgPrefix");
         if(existingInt != null) {
             existingInt.setConfig(config);
-            orgIntDb.updateOrganizationIntegration(existingInt);
+            orgIntDb.update(existingInt);
         } else {
             Organization org = orgDb.getOrganization(orgPrefix);
             if(org == null)
                 failureRedirect(orgPrefix);
 
-            OrganizationIntegration orgInt = new OrganizationIntegration();
+            Integration orgInt = new Integration();
             orgInt.setSystemIntegrationId(sysInt.getId());
             orgInt.setConfig(config);
             orgInt.setOrgId(org.getId());

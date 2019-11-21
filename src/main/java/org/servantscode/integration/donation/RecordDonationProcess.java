@@ -46,6 +46,9 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
 
         DataReconciler dataReconciler = new DataReconciler(org.getId());
 
+        if(dataReconciler.transactionExists(payment.getTransactionId()))
+            return;
+
         int fundId = dataReconciler.getFundIdForName(fundName);
         if(fundId <= 0) {
             LOG.debug("No fund found creating fund: " + fundName);

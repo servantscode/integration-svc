@@ -5,7 +5,6 @@ import org.servantscode.commons.search.InsertBuilder;
 import org.servantscode.commons.search.QueryBuilder;
 
 import java.sql.*;
-import java.time.ZonedDateTime;
 import java.util.Map;
 
 public class DataReconciler extends DBAccess {
@@ -175,6 +174,18 @@ public class DataReconciler extends DBAccess {
             ResultSet rs = stmt.executeQuery()) {
 
             return rs.next()? rs.getInt(0): 0;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not query pledges: " + e.getMessage(), e);
+        }
+    }
+
+    public boolean transactionExists(String transactionId) {
+        QueryBuilder query = select("transaction_id").from("donations").with("transaction_id", transactionId).inOrg(orgId);
+        try(Connection conn = getConnection();
+            PreparedStatement stmt = query.prepareStatement(conn);
+            ResultSet rs = stmt.executeQuery()) {
+
+            return rs.next();
         } catch (SQLException e) {
             throw new RuntimeException("Could not query pledges: " + e.getMessage(), e);
         }
