@@ -70,21 +70,30 @@ public class PushpaySvc extends SCServiceBase {
 
         String orgName = OrganizationContext.getOrganization().getHostName();
         Integration orgInt = orgIntDb.getIntegration(PUSH_PAY, orgName);
-        orgInt.setLastSync(ZonedDateTime.now());
-        orgIntDb.update(orgInt);
+        ZonedDateTime syncTime = ZonedDateTime.now();
 
         PushpayServiceClient client = configureClient(orgInt);
 
-        List<PushPayOrganization> orgs = client.getOrganizations().getItems();
-        List<PushPayPayment> payments = new LinkedList<>();
-        for(PushPayOrganization org: orgs) {
-            GetPaymentsResponse resp = client.getPayments(org.getKey());
-            payments.addAll(resp.getItems());
-        }
+        try {
+            List<PushPayOrganization> orgs = client.getOrganizations().getItems();
+            List<PushPayPayment> payments = new LinkedList<>();
+            for (PushPayOrganization org : orgs) {
+                GetPaymentsResponse resp = client.getPayments(org.getKey());
+                payments.addAll(resp.getItems());
+            }
 
-        RecordDonationProcess proc = new RecordDonationProcess(payments, OrganizationContext.getOrganization());
-        //TODO: Async this.
-        proc.run();
+            RecordDonationProcess proc = new RecordDonationProcess(payments, OrganizationContext.getOrganization());
+            //TODO: Async this.
+            proc.run();
+
+            orgInt.setLastSync(syncTime);
+            orgInt.setFailure(null);
+            orgIntDb.update(orgInt);
+        } catch(Throwable t) {
+            LOG.error("Failed to sync donation data with PushPah.", t);
+            orgInt.setFailure(t.getMessage());
+            orgIntDb.update(orgInt);
+        }
     }
 
     // ----- Private -----

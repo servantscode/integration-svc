@@ -24,21 +24,14 @@ import java.util.function.Function;
 import static org.servantscode.commons.StringUtils.isEmpty;
 import static org.servantscode.commons.StringUtils.isSet;
 
-public class PushpayServiceClient extends AbstractServiceClient {
+public class PushpayServiceClient extends BasePushpayClient {
     private static final Logger LOG = LogManager.getLogger(PushpayServiceClient.class);
-
-    private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getMapper();
-
-    static {
-        OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    }
 
     private String token = null;
     private final PushpaySystemConfiguration systemConfig;
     private final PushpayClientConfiguration clientConfig;
     private final Consumer<String> refreshTokenCallback;
 
-    private int backoffStrength = 0;
 
     public PushpayServiceClient(PushpaySystemConfiguration systemConfig,
                                 PushpayClientConfiguration clientConfig,
@@ -84,7 +77,8 @@ public class PushpayServiceClient extends AbstractServiceClient {
         return isSet(token)? token: login();
     }
 
-    private String login() {
+    @Override
+    public String login() {
         PushpayAuthClient authClient = new PushpayAuthClient(systemConfig);
         Map<String, String> resp = authClient.refreshBearerToken(clientConfig.getRefreshToken());
 
@@ -96,45 +90,5 @@ public class PushpayServiceClient extends AbstractServiceClient {
         token = resp.get("access_token");
         LOG.debug("Refreshed bearer token.");
         return token;
-    }
-
-    private <T> T retryRequest(Producer<T> doCall) {
-        while(true) {
-            try {
-                T value = doCall.call();
-                backoffStrength--;
-                return value;
-            } catch (NotAuthorizedException e) {
-                LOG.info("Login expired. Updating access token.");
-                login();
-            } catch (TooManyRequestsException e) {
-                backoffStrength++;
-                LOG.info("Too many requests. Backoff strength is: " + backoffStrength);
-                try {
-                    Thread.sleep(backoffStrength^2*500);
-                } catch (InterruptedException e1) {
-                    return null;
-                }
-            }
-        }
-    }
-
-    private void handleStatus(Response resp) {
-        if (resp.getStatus() == 401) {
-            throw new NotAuthorizedException("Invalid credentials.");
-        } else if (resp.getStatus() == 429) {
-            throw new TooManyRequestsException();
-        } else if (resp.getStatus() != 200) {
-            throw new RuntimeException("Could not retrieve organization information from PushPay");
-        }
-    }
-
-    private <T> T parseResponse(Response resp, Class<T> clazz) {
-        try {
-            String respBody = resp.readEntity(String.class);
-            return OBJECT_MAPPER.readValue(respBody, clazz);
-        } catch (IOException e) {
-            throw new RuntimeException("Cannot parse json. ", e);
-        }
     }
 }
