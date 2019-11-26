@@ -29,29 +29,32 @@ public class DBUpgrade extends AbstractDBUpgrade {
                                                   "config TEXT)");
         }
 
-        if(!tableExists("incoming_donations")) {
-            LOG.info("-- Creating incoming_donations table");
-            runSql("CREATE TABLE incoming_donations (integration_id INTEGER REFERENCES org_integrations(id) ON DELETE CASCADE, " +
-                                                    "external_id TEXT, " +
-                                                    "transaction_id TEXT, " +
-                                                    "fund TEXT, " +
-                                                    "donor_id TEXT, " +
-                                                    "amount float, " +
-                                                    "donation_date TIMESTAMP WITH TIME ZONE, " +
-                                                    "tax_deductible BOOLEAN, " +
-                                                    "org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE)");
+        if(!tableExists("donors")) {
+            LOG.info("-- Creating donors table");
+            runSql("CREATE TABLE donors (id SERIAL PRIMARY KEY," +
+                                        "integration_id INTEGER REFERENCES org_integrations(id) ON DELETE CASCADE, " +
+                                        "external_id TEXT, " +
+                                        "internal_id INTEGER, " +
+                                        "person_id INTEGER REFERENCES people(id) ON DELETE CASCADE, " +
+                                        "family_id INTEGER REFERENCES families(id) ON DELETE CASCADE, " +
+                                        "name TEXT, " +
+                                        "email TEXT, " +
+                                        "phone_number TEXT, " +
+                                        "org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE)");
         }
 
-        if(!tableExists("external_donors")) {
-            LOG.info("-- Creating external_donors table");
-            runSql("CREATE TABLE external_donors (integration_id INTEGER REFERENCES org_integrations(id) ON DELETE CASCADE, " +
-                                                 "external_id TEXT, " +
-                                                 "internal_id INTEGER, " +
-                                                 "family_id INTEGER, " +
-                                                 "name TEXT, " +
-                                                 "email TEXT, " +
-                                                 "phone_number TEXT, " +
-                                                 "org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE)");
+        if(!tableExists("incoming_donations")) {
+            LOG.info("-- Creating incoming_donations table");
+            runSql("CREATE TABLE incoming_donations (id BIGSERIAL PRIMARY KEY," +
+                    "integration_id INTEGER REFERENCES org_integrations(id) ON DELETE CASCADE, " +
+                    "external_id TEXT, " +
+                    "transaction_id TEXT, " +
+                    "fund TEXT, " +
+                    "donor_id INTEGER REFERENCES donors(id) ON DELETE CASCADE, " +
+                    "amount float, " +
+                    "donation_date TIMESTAMP WITH TIME ZONE, " +
+                    "tax_deductible BOOLEAN, " +
+                    "org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE)");
         }
 
         ensureColumn("org_integrations", "failure", "TEXT");

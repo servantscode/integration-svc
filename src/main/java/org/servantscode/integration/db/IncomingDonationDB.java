@@ -30,7 +30,7 @@ public class IncomingDonationDB extends EasyDB<IncomingDonation> {
 
     private QueryBuilder query(QueryBuilder selection) {
         return selection.from("incoming_donations id")
-                .leftJoin("donors d ON id.donor_id=d.external_id");
+                .leftJoin("donors d ON id.donor_id=d.id");
     }
 
     private QueryBuilder selectData() {
@@ -41,27 +41,34 @@ public class IncomingDonationDB extends EasyDB<IncomingDonation> {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot query incomingDonations outside of org context");
 
-        return getCount(query(count()).search(searchParser.parse(search)).inOrg());
+        return getCount(query(count()).search(searchParser.parse(search)).inOrg("id.org_id"));
     }
 
     public IncomingDonation getIncomingDonation(String incomingDonationName) {
-        return getOne(query(selectData()).with("name", incomingDonationName).inOrg());
+        return getOne(query(selectData()).with("name", incomingDonationName).inOrg("id.org_id"));
     }
 
     public IncomingDonation getIncomingDonation(int id) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot query incomingDonations outside of org context");
 
-        return getOne(query(selectData()).withId(id).inOrg());
+        return getOne(query(selectData()).with("id.id", id).inOrg("id.org_id"));
     }
 
     public List<IncomingDonation> getIncomingDonations(String search, String sortField, int start, int count) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot query incomingDonations outside of org context");
 
-        QueryBuilder query = query(selectData()).search(searchParser.parse(search)).inOrg()
+        QueryBuilder query = query(selectData()).search(searchParser.parse(search)).inOrg("id.org_id")
                 .page(sortField, start, count);
         return get(query);
+    }
+
+    public List<IncomingDonation> getDonationsForDonor(int donorId) {
+        if(OrganizationContext.getOrganization() == null)
+            throw new RuntimeException("Cannot query incomingDonations outside of org context");
+
+        return get(query(selectData()).with("donor_id", donorId).inOrg("id.org_id"));
     }
 
     public IncomingDonation create(IncomingDonation incomingDonation) {
@@ -108,13 +115,13 @@ public class IncomingDonationDB extends EasyDB<IncomingDonation> {
         return incomingDonation;
     }
 
-    public boolean deleteIncomingDonation(int id) {
+    public boolean deleteIncomingDonation(long id) {
         if (OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot delete an org incomingDonation outside of org context");
         return deleteIncomingDonation(id, OrganizationContext.orgId());
     }
 
-    public boolean deleteIncomingDonation(int id, int orgId) {
+    public boolean deleteIncomingDonation(long id, int orgId) {
         return delete(deleteFrom("incoming_donations").withId(id).inOrg(orgId));
     }
 
@@ -122,35 +129,16 @@ public class IncomingDonationDB extends EasyDB<IncomingDonation> {
     @Override
     protected IncomingDonation processRow(ResultSet rs) throws SQLException {
         IncomingDonation i = new IncomingDonation();
-        i.setId(rs.getInt("id"));
+        i.setId(rs.getLong("id"));
         i.setIntegrationId(rs.getInt("integration_id"));
         i.setExternalId(rs.getString("external_id"));
-        i.setDonorId(rs.getString("donor_id"));
+        i.setDonorId(rs.getInt("donor_id"));
+        i.setDonorName(rs.getString("name"));
         i.setFund(rs.getString("fund"));
         i.setTransactionId(rs.getString("transaction_id"));
         i.setAmount(rs.getFloat("amount"));
         i.setTaxDeductible(rs.getBoolean("tax_deductible"));
         i.setDonationDate(convert(rs.getTimestamp("donation_date")));
         return i;
-    }
-
-    private static String toEncryptedString(Map<String, String> data) {
-        try {
-            String config = OBJECT_MAPPER.writeValueAsString(data);
-            return ConfigUtils.encryptConfig(config);
-        } catch (JsonProcessingException e) {
-            LOG.error("Could not map configuration object to string for storage.");
-            throw new RuntimeException("Could not map configuration object to string for storage.", e);
-        }
-    }
-
-    private static Map<String, String> fromEncryptedString(String dataString) {
-        try {
-            String decryptedConfig = ConfigUtils.decryptConfig(dataString);
-            return OBJECT_MAPPER.readValue(decryptedConfig, new TypeReference<Map<String, String>>(){});
-        } catch (IOException e) {
-            LOG.error("Could not read confgiuration object from storage.", e);
-            throw new RuntimeException("Could not read confgiuration object from storage.", e);
-        }
     }
 }

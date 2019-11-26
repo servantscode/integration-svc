@@ -1,11 +1,8 @@
 package org.servantscode.integration.db;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.servantscode.commons.ConfigUtils;
 import org.servantscode.commons.db.EasyDB;
 import org.servantscode.commons.search.InsertBuilder;
 import org.servantscode.commons.search.QueryBuilder;
@@ -13,11 +10,9 @@ import org.servantscode.commons.search.UpdateBuilder;
 import org.servantscode.commons.security.OrganizationContext;
 import org.servantscode.integration.Donor;
 
-import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 
 public class DonorDB extends EasyDB<Donor> {
     private static final Logger LOG = LogManager.getLogger(DonorDB.class);
@@ -52,6 +47,11 @@ public class DonorDB extends EasyDB<Donor> {
             throw new RuntimeException("Cannot query donors outside of org context");
 
         return getOne(query(selectData()).withId(id).inOrg());
+    }
+
+
+    public Donor getDonorByKey(int integrationId, String key) {
+        return getOne(query(selectData()).with("integration_id", integrationId).with("external_id", key));
     }
 
     public List<Donor> getDonors(String search, String sortField, int start, int count) {
@@ -128,25 +128,5 @@ public class DonorDB extends EasyDB<Donor> {
         i.setEmail(rs.getString("email"));
         i.setPhoneNumber(rs.getString("phone_number"));
         return i;
-    }
-
-    private static String toEncryptedString(Map<String, String> data) {
-        try {
-            String config = OBJECT_MAPPER.writeValueAsString(data);
-            return ConfigUtils.encryptConfig(config);
-        } catch (JsonProcessingException e) {
-            LOG.error("Could not map configuration object to string for storage.");
-            throw new RuntimeException("Could not map configuration object to string for storage.", e);
-        }
-    }
-
-    private static Map<String, String> fromEncryptedString(String dataString) {
-        try {
-            String decryptedConfig = ConfigUtils.decryptConfig(dataString);
-            return OBJECT_MAPPER.readValue(decryptedConfig, new TypeReference<Map<String, String>>(){});
-        } catch (IOException e) {
-            LOG.error("Could not read confgiuration object from storage.", e);
-            throw new RuntimeException("Could not read confgiuration object from storage.", e);
-        }
     }
 }

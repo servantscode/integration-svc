@@ -46,7 +46,8 @@ public class DataReconciler extends DBAccess {
     }
 
     public int getFamilyId(String personName, String personEmail, String personPhone) {
-        QueryBuilder phoneQuery = select("family_id").from("person_phone_numbers pn").leftJoin("people p ON pn.person_id=p.id").with("number", personPhone);
+        QueryBuilder phoneQuery = select("family_id").from("person_phone_numbers pn")
+                .leftJoin("people p ON pn.person_id=p.id").with("number", personPhone);
         try(Connection conn = getConnection();
             PreparedStatement stmt = phoneQuery.prepareStatement(conn);
             ResultSet rs = stmt.executeQuery()) {

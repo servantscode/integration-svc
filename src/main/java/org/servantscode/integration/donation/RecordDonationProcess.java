@@ -4,22 +4,35 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.servantscode.commons.Organization;
 import org.servantscode.integration.AsyncProcess;
+import org.servantscode.integration.Donor;
+import org.servantscode.integration.IncomingDonation;
 import org.servantscode.integration.db.DataReconciler;
+import org.servantscode.integration.db.DonorDB;
+import org.servantscode.integration.db.IncomingDonationDB;
 import org.servantscode.integration.pushpay.dao.PushPayPayment;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class RecordDonationProcess extends AsyncProcess implements Runnable {
     private static final Logger LOG = LogManager.getLogger(RecordDonationProcess.class);
 
     private List<PushPayPayment> payments;
     private Organization org;
+    private int integrationId;
 
-    public RecordDonationProcess(List<PushPayPayment> payments, Organization org) {
+    private DonorDB donorDb;
+    private IncomingDonationDB donationDb;
+    private DonationRecorder recorder;
+
+    public RecordDonationProcess(List<PushPayPayment> payments, Organization org, int integrationId) {
         this.payments = payments;
         this.org = org;
+        this.integrationId = integrationId;
+
+        this.donorDb = new DonorDB();
+        this.donationDb = new IncomingDonationDB();
+
+        this.recorder = new DonationRecorder(org.getId());
     }
 
     @Override
@@ -43,39 +56,54 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
         String personName = payment.getPayer().getFullName();
         String personEmail = payment.getPayer().getEmailAddress();
         String personPhone = formatPhoneNumber(payment.getPayer().getMobileNumber());
+        String externalKey = payment.getPayer().getKey();
 
         DataReconciler dataReconciler = new DataReconciler(org.getId());
 
         if(dataReconciler.transactionExists(payment.getTransactionId()))
             return;
 
+        //TODO: Call fund service to look up fund
         int fundId = dataReconciler.getFundIdForName(fundName);
         if(fundId <= 0) {
             LOG.debug("No fund found creating fund: " + fundName);
             fundId = dataReconciler.createFund(fundName);
         }
 
-        int familyId = dataReconciler.getFamilyId(personName, personEmail, personPhone);
-        if(familyId <= 0) {
-            LOG.debug("No family found creating family: " + fundName);
-            familyId = dataReconciler.createPerson(personName, personEmail, personPhone);
+        Donor donor = donorDb.getDonorByKey(integrationId, externalKey);
+        if(donor == null) {
+            donor = new Donor();
+            donor.setIntegrationId(integrationId);
+            donor.setExternalId(externalKey);
+            donor.setName(personName);
+            donor.setEmail(personEmail);
+            donor.setPhoneNumber(personPhone);
+            donorDb.create(donor);
         }
 
-        int pledgeId = dataReconciler.getPledgeId(familyId, fundId);
+        int familyId = donor.getFamilyId();
+        if(familyId <= 0) {
+            //TODO: Call service to look up family
+            familyId = dataReconciler.getFamilyId(personName, personEmail, personPhone);
+            donor.setFamilyId(familyId);
+        }
 
-        Map<String, Object> d = new HashMap<>(16);
-        d.put("familyId", familyId);
-        d.put("fundId", fundId);
-        d.put("pledgeId", pledgeId);
-        d.put("amount", Double.parseDouble(payment.getAmount().getAmount()));
-        d.put("deductibleAmount", payment.getFund().isTaxDeductible()? Double.parseDouble(payment.getAmount().getAmount()): 0.0);
-        d.put("donationDate", payment.getCreatedOn());
-        d.put("donationType", "EGIFT");
-        d.put("transactionId", payment.getTransactionId());
 
-        LOG.debug("Creating donation for " + personName);
-        dataReconciler.createDonation(d);
-        LOG.debug("Donation created!");
+        IncomingDonation donation = new IncomingDonation();
+        donation.setIntegrationId(integrationId);
+        donation.setExternalId(payment.getPaymentToken());
+        donation.setFund(fundName);
+        donation.setTransactionId(payment.getTransactionId());
+        donation.setTaxDeductible(payment.getFund().isTaxDeductible());
+        donation.setAmount(Float.parseFloat(payment.getAmount().getAmount()));
+        donation.setDonationDate(payment.getCreatedOn());
+        donation.setDonorId(donor.getId());
+
+        if(familyId > 0) {
+            recorder.record(donation);
+        } else {
+            donationDb.create(donation, org.getId());
+        }
     }
 
     private static String formatPhoneNumber(String number) {

@@ -41,29 +41,6 @@ public class PushpaySvc extends SCServiceBase {
         this.orgIntDb = new IntegrationDB();
         this.sysIntDb = new SystemIntegrationDB();
     }
-//
-//    @GET @Path("/organization") @Produces(MediaType.APPLICATION_JSON)
-//    public List<PushPayOrganization> getOrgs() {
-//
-//        PushpayServiceClient client = configureClient();
-//
-//        GetOrganizationsResponse resp = client.getOrganizations();
-//        return resp.getItems();
-//    }
-//
-//    @GET @Path("/payment") @Produces(MediaType.APPLICATION_JSON)
-//    public List<PushPayPayment> getPayments() {
-//
-//        PushpayServiceClient client = configureClient();
-//
-//        List<PushPayOrganization> orgs = client.getOrganizations().getItems();
-//        List<PushPayPayment> payments = new LinkedList<>();
-//        for(PushPayOrganization org: orgs) {
-//            GetPaymentsResponse resp = client.getPayments(org.getKey());
-//            payments.addAll(resp.getItems());
-//        }
-//        return payments;
-//    }
 
     @POST @Path("/payment/sync") @Produces(MediaType.APPLICATION_JSON)
     public void syncPayments() {
@@ -82,7 +59,7 @@ public class PushpaySvc extends SCServiceBase {
                 payments.addAll(resp.getItems());
             }
 
-            RecordDonationProcess proc = new RecordDonationProcess(payments, OrganizationContext.getOrganization());
+            RecordDonationProcess proc = new RecordDonationProcess(payments, OrganizationContext.getOrganization(), orgInt.getId());
             //TODO: Async this.
             proc.run();
 

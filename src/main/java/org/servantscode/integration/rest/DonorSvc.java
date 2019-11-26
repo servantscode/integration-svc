@@ -5,7 +5,10 @@ import org.apache.logging.log4j.Logger;
 import org.servantscode.commons.rest.PaginatedResponse;
 import org.servantscode.commons.rest.SCServiceBase;
 import org.servantscode.integration.Donor;
+import org.servantscode.integration.IncomingDonation;
 import org.servantscode.integration.db.DonorDB;
+import org.servantscode.integration.db.IncomingDonationDB;
+import org.servantscode.integration.donation.DonationRecorder;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -73,6 +76,8 @@ public class DonorSvc extends SCServiceBase {
         try {
             db.update(donor);
             LOG.info("Edited donor: " + donor.getName());
+
+            checkIncomingDonations(donor);
             return donor;
         } catch (Throwable t) {
             LOG.error("Updating donor failed:", t);
@@ -93,6 +98,23 @@ public class DonorSvc extends SCServiceBase {
         } catch (Throwable t) {
             LOG.error("Deleting donor failed:", t);
             throw t;
+        }
+    }
+
+    // ----- Private -----
+    private void checkIncomingDonations(Donor donor) {
+        if(donor.getFamilyId() > 0) {
+            int count = 0;
+            IncomingDonationDB donationDb = new IncomingDonationDB();
+            List<IncomingDonation> donations = donationDb.getDonationsForDonor(donor.getId());
+            DonationRecorder recorder = new DonationRecorder();
+            for(IncomingDonation donation: donations) {
+                recorder.record(donation);
+                donationDb.deleteIncomingDonation(donation.getId());
+                count++;
+            }
+
+            LOG.info("Recorded " + count + " incoming donations.");
         }
     }
 }

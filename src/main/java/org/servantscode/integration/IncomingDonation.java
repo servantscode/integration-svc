@@ -3,19 +3,20 @@ package org.servantscode.integration;
 import java.time.ZonedDateTime;
 
 public class IncomingDonation {
-    private int id;
+    private long id;
     private int integrationId;
     private String externalId;
     private String transactionId;
     private String fund;
-    private String donorId;
+    private int donorId;
+    private String donorName;
     private float amount;
     private ZonedDateTime donationDate;
     private boolean taxDeductible;
 
     // ----- Accessors -----
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public long getId() { return id; }
+    public void setId(long id) { this.id = id; }
 
     public int getIntegrationId() { return integrationId; }
     public void setIntegrationId(int integrationId) { this.integrationId = integrationId; }
@@ -29,8 +30,11 @@ public class IncomingDonation {
     public String getFund() { return fund; }
     public void setFund(String fund) { this.fund = fund; }
 
-    public String getDonorId() { return donorId; }
-    public void setDonorId(String donorId) { this.donorId = donorId; }
+    public int getDonorId() { return donorId; }
+    public void setDonorId(int donorId) { this.donorId = donorId; }
+
+    public String getDonorName() { return donorName; }
+    public void setDonorName(String donorName) { this.donorName = donorName; }
 
     public float getAmount() { return amount; }
     public void setAmount(float amount) { this.amount = amount; }

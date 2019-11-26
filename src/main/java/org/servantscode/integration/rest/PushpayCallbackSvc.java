@@ -50,13 +50,13 @@ public class PushpayCallbackSvc extends SCServiceBase {
 
         try {
             Map<String, String> resp = getAuthorization(code, sysInt);
-            String authToken = resp.get("access_token");
+//            String authToken = resp.get("access_token");
             String refreshToken = resp.get("refresh_token");
 
             saveOrgIntegration(orgPrefix, sysInt, refreshToken);
 
-            return "Great success! Auth token is: " + authToken + " and refresh token is: " + refreshToken;
-//                throw new RedirectionException(301, URI.create("https;//" + orgPrefix + ".servantscode.org/integrations/pushpay/success"));
+//            return "Great success! Auth token is: " + authToken + " and refresh token is: " + refreshToken;
+            throw new RedirectionException(301, URI.create("https;//" + orgPrefix + ".servantscode.org/integrations"));
         } catch(RedirectionException re) {
             throw re;
         } catch(Throwable t) {
