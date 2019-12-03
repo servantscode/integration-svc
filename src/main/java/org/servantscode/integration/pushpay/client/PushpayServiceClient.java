@@ -14,9 +14,14 @@ import org.servantscode.integration.pushpay.dao.GetPaymentsResponse;
 
 import javax.validation.constraints.Null;
 import javax.ws.rs.NotAuthorizedException;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -31,6 +36,8 @@ public class PushpayServiceClient extends BasePushpayClient {
     private final PushpaySystemConfiguration systemConfig;
     private final PushpayClientConfiguration clientConfig;
     private final Consumer<String> refreshTokenCallback;
+
+    private static final int PAGE_SIZE = 100;
 
 
     public PushpayServiceClient(PushpaySystemConfiguration systemConfig,
@@ -63,10 +70,18 @@ public class PushpayServiceClient extends BasePushpayClient {
         });
     }
 
-
-    public GetPaymentsResponse getPayments(String orgKey) {
+    public GetPaymentsResponse getPayments(String orgKey, int page, ZonedDateTime since, ZonedDateTime to) {
         return retryRequest( () -> {
-            Response resp = get("/organization/" + orgKey + "/payments", Collections.singletonMap("count", 100));
+            Map<String, Object> params = new HashMap<>(4);
+            params.put("count", PAGE_SIZE);
+            if(page > 0)
+                params.put("page", page);
+            if(since != null)
+                params.put("updatedFrom", since.format(DateTimeFormatter.ISO_DATE_TIME));
+            if(to != null)
+                params.put("updatedTo", to.format(DateTimeFormatter.ISO_DATE_TIME));
+
+            Response resp = get("/organization/" + orgKey + "/payments", params);
             handleStatus(resp);
             return parseResponse(resp, GetPaymentsResponse.class);
         });

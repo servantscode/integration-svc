@@ -56,7 +56,7 @@ public class PushpayCallbackSvc extends SCServiceBase {
             saveOrgIntegration(orgPrefix, sysInt, refreshToken);
 
 //            return "Great success! Auth token is: " + authToken + " and refresh token is: " + refreshToken;
-            throw new RedirectionException(301, URI.create("https;//" + orgPrefix + ".servantscode.org/integrations"));
+            throw new RedirectionException(301, URI.create("https://" + orgPrefix + ".servantscode.org/admin/integration"));
         } catch(RedirectionException re) {
             throw re;
         } catch(Throwable t) {
@@ -71,7 +71,7 @@ public class PushpayCallbackSvc extends SCServiceBase {
         Map<String, String> config = new HashMap<>(2);
         config.put("refreshToken", refreshToken);
 
-        Integration existingInt = orgIntDb.getIntegration(PUSH_PAY, "orgPrefix");
+        Integration existingInt = orgIntDb.getIntegration(PUSH_PAY, orgPrefix);
         if(existingInt != null) {
             existingInt.setConfig(config);
             orgIntDb.update(existingInt);
@@ -108,7 +108,7 @@ public class PushpayCallbackSvc extends SCServiceBase {
     }
 
     private void failureRedirect(String orgPrefix) {
-        throw new RedirectionException(301, URI.create("https;//" + orgPrefix + ".servantscode.org/integrations/pushpay/failed"));
+        throw new RedirectionException(301, URI.create("https://" + orgPrefix + ".servantscode.org/admin/integration?failure=Could%20not%20authenticate%20with%20PushPay"));
     }
 
     //Util to inject refresh token into dev environment

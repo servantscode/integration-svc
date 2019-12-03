@@ -31,36 +31,41 @@ public class IntegrationDB extends EasyDB<Integration> {
     private QueryBuilder query(QueryBuilder selection) {
         return selection.from("org_integrations oi")
                 .leftJoin("system_integrations si ON oi.system_integration_id = si.id")
-                .leftJoin("organizations o ON oi.org_id=o.id");
+                .leftJoin("organizations o ON oi.org_id=o.id")
+                .leftJoin("automations a ON a.integration_id = oi.id");
     }
 
     private QueryBuilder selectData() {
-        return select("oi.*", "si.name");
+        return select("oi.*", "si.name", "a.next", "a.id AS automation_id");
     }
 
     public int getCount(String search) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot query org integrations outside of org context");
 
-        return getCount(query(count()).search(searchParser.parse(search)).inOrg());
+        return getCount(query(count()).search(searchParser.parse(search)).inOrg("oi.org_id"));
     }
 
     public Integration getIntegration(String integrationName, String orgPrefix) {
         return getOne(query(selectData()).with("si.name", integrationName).with("host_name", orgPrefix));
     }
 
+    public Integration getIntegration(String integrationName, int orgId) {
+        return getOne(query(selectData()).with("si.name", integrationName).with("oi.org_id", orgId));
+    }
+
     public Integration getIntegration(int id) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot query org integrations outside of org context");
 
-        return getOne(query(selectData()).with("oi.id", id).inOrg());
+        return getOne(query(selectData()).with("oi.id", id).inOrg("oi.org_id"));
     }
 
     public List<Integration> getIntegrations(String search, String sortField, int start, int count) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot query org integrations outside of org context");
 
-        QueryBuilder query = query(selectData()).search(searchParser.parse(search)).inOrg()
+        QueryBuilder query = query(selectData()).search(searchParser.parse(search)).inOrg("oi.org_id")
                 .page(sortField, start, count);
         return get(query);
     }
@@ -92,7 +97,7 @@ public class IntegrationDB extends EasyDB<Integration> {
     public boolean deleteIntegration(int id) {
         if(OrganizationContext.getOrganization() == null)
             throw new RuntimeException("Cannot delete an org integration outside of org context");
-        return delete(deleteFrom("org_integrations").withId(id).inOrg());
+        return delete(deleteFrom("org_integrations").withId(id).inOrg("org_id"));
     }
 
     // ----- Private -----
@@ -101,9 +106,11 @@ public class IntegrationDB extends EasyDB<Integration> {
         Integration i = new Integration();
         i.setId(rs.getInt("id"));
         i.setSystemIntegrationId(rs.getInt("system_integration_id"));
+        i.setAutomationId(rs.getInt("automation_id"));
         i.setName(rs.getString("name"));
         i.setFailure(rs.getString("failure"));
         i.setLastSync(convert(rs.getTimestamp("last_sync")));
+        i.setNextScheduledSync(convert(rs.getTimestamp("next")));
         i.setConfig(fromEncryptedString(rs.getString("config")));
         i.setOrgId(rs.getInt("org_id"));
         return i;

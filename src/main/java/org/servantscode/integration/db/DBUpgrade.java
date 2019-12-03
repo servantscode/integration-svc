@@ -26,6 +26,8 @@ public class DBUpgrade extends AbstractDBUpgrade {
             runSql("CREATE TABLE org_integrations (id SERIAL PRIMARY KEY, " +
                                                   "system_integration_id INTEGER REFERENCES system_integrations(id) ON DELETE CASCADE, " +
                                                   "org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE, " +
+                                                  "failure TEXT, " +
+                                                  "last_sync TIMESTAMP WITH TIME ZONE," +
                                                   "config TEXT)");
         }
 
@@ -55,6 +57,18 @@ public class DBUpgrade extends AbstractDBUpgrade {
                     "donation_date TIMESTAMP WITH TIME ZONE, " +
                     "tax_deductible BOOLEAN, " +
                     "org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE)");
+        }
+
+        if(!tableExists("automations")) {
+            LOG.info("-- Creating automations table");
+            runSql("CREATE TABLE automations (id SERIAL PRIMARY KEY," +
+                                             "integration_id INTEGER REFERENCES org_integrations(id) ON DELETE CASCADE, " +
+                                             "cycle TEXT," +
+                                             "frequency INTEGER," +
+                                             "weekly_days TEXT, " +
+                                             "start TIMESTAMP WITH TIME ZONE, " +
+                                             "next TIMESTAMP WITH TIME ZONE, " +
+                                             "org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE)");
         }
 
         ensureColumn("org_integrations", "failure", "TEXT");

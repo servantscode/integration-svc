@@ -17,22 +17,23 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
     private static final Logger LOG = LogManager.getLogger(RecordDonationProcess.class);
 
     private List<PushPayPayment> payments;
-    private Organization org;
     private int integrationId;
 
     private DonorDB donorDb;
     private IncomingDonationDB donationDb;
     private DonationRecorder recorder;
+    private int orgId;
 
-    public RecordDonationProcess(List<PushPayPayment> payments, Organization org, int integrationId) {
+    public RecordDonationProcess(List<PushPayPayment> payments, int orgId, int integrationId) {
         this.payments = payments;
-        this.org = org;
         this.integrationId = integrationId;
+
+        this.orgId = orgId;
 
         this.donorDb = new DonorDB();
         this.donationDb = new IncomingDonationDB();
 
-        this.recorder = new DonationRecorder(org.getId());
+        this.recorder = new DonationRecorder(orgId);
     }
 
     @Override
@@ -40,7 +41,7 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
         setState(AsyncStatus.RUNNING);
         try {
             for(PushPayPayment payment: payments) {
-                storePayment(payment, org);
+                storePayment(payment, orgId);
             }
 
             setState(AsyncStatus.COMPLETE);
@@ -51,14 +52,19 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
     }
 
     // ----- Private -----
-    private void storePayment(PushPayPayment payment, Organization org) {
+    private void storePayment(PushPayPayment payment, int orgId) {
+        if(!payment.getStatus().equalsIgnoreCase("Success")) {
+            LOG.info("Skipping PusyPay payment in state: " + payment.getStatus());
+            return;
+        }
+
         String fundName = payment.getFund().getName();
         String personName = payment.getPayer().getFullName();
         String personEmail = payment.getPayer().getEmailAddress();
         String personPhone = formatPhoneNumber(payment.getPayer().getMobileNumber());
         String externalKey = payment.getPayer().getKey();
 
-        DataReconciler dataReconciler = new DataReconciler(org.getId());
+        DataReconciler dataReconciler = new DataReconciler(orgId);
 
         if(dataReconciler.transactionExists(payment.getTransactionId()))
             return;
@@ -78,7 +84,7 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
             donor.setName(personName);
             donor.setEmail(personEmail);
             donor.setPhoneNumber(personPhone);
-            donorDb.create(donor);
+            donorDb.create(donor, orgId);
         }
 
         int familyId = donor.getFamilyId();
@@ -102,7 +108,7 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
         if(familyId > 0) {
             recorder.record(donation);
         } else {
-            donationDb.create(donation, org.getId());
+            donationDb.create(donation, orgId);
         }
     }
 

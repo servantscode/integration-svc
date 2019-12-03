@@ -14,4 +14,8 @@
     <listener>
         <listener-class>org.servantscode.integration.db.DBUpgrade</listener-class>
     </listener>
+
+    <listener>
+        <listener-class>org.servantscode.integration.Automator</listener-class>
+    </listener>
 </web-app>
