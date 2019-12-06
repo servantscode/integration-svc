@@ -87,6 +87,7 @@ public class IntegrationDB extends EasyDB<Integration> {
                 .value("config", toEncryptedString(integration.getConfig()))
                 .value("failure", integration.getFailure())
                 .value("last_sync", integration.getLastSync())
+                .value("next", integration.getNextScheduledSync())
                 .withId(integration.getId())
                 .with("org_id", integration.getOrgId());
         if(!update(cmd))

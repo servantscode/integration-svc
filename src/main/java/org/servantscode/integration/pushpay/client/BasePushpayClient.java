@@ -55,9 +55,10 @@ public abstract class BasePushpayClient extends AbstractServiceClient {
         if (resp.getStatus() == 401) {
             throw new NotAuthorizedException("Invalid credentials.");
         } else if (resp.getStatus() == 429) {
+            //TODO: Use time on failure request + 1 sec.
             throw new TooManyRequestsException();
         } else if (resp.getStatus() != 200) {
-            throw new RuntimeException("Could not retrieve organization information from PushPay");
+            throw new RuntimeException("Could not retrieve organization information from PushPay. Returned status: " + resp.getStatus());
         }
     }
 
