@@ -1,10 +1,11 @@
 package org.servantscode.integration.pushpay.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.servantscode.integration.pushpay.PushpaySystemConfiguration;
 
 import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -12,6 +13,7 @@ import java.util.Base64;
 import java.util.Map;
 
 public class PushpayAuthClient extends BasePushpayClient {
+    private static final Logger LOG = LogManager.getLogger(PushpayAuthClient.class);
 
     private final PushpaySystemConfiguration config;
 
@@ -41,6 +43,7 @@ public class PushpayAuthClient extends BasePushpayClient {
         params.add("grant_type", "authorization_code");
         params.add("code", code);
         params.add("redirect_uri", config.getCallbackUrl());
+        LOG.debug("Retrieving access tokens from PushPay. Using callback URL: " + config.getCallbackUrl());
 
         return retryRequest( () -> {
             Response response = buildInvocation().post(Entity.form(params));
