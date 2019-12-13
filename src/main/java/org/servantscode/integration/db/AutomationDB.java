@@ -111,7 +111,7 @@ public class AutomationDB extends EasyDB<Automation> {
                 .value("frequency", automation.getFrequency())
                 .value("weekly_days", encodeDays(automation.getWeeklyDays()))
                 .value("start", automation.getScheduleStart())
-                .value("next", automation.getScheduleStart())
+                .value("next", automation.getNextScheduled())
                .withId(automation.getId()).inOrg(org_id);
         if(!update(cmd))
             throw new RuntimeException("Could not update automation record");

@@ -31,7 +31,7 @@ public class AutomationSvc extends SCServiceBase {
                                               @QueryParam("sort_field") @DefaultValue("name") String sortField,
                                               @QueryParam("search") @DefaultValue("") String search) {
 
-        verifyUserAccess("automation.list");
+        verifyUserAccess("integration.automation.list");
         try {
             int totalPeople = db.getCount(search);
 
@@ -46,7 +46,7 @@ public class AutomationSvc extends SCServiceBase {
 
     @GET @Path("/{id}") @Produces(MediaType.APPLICATION_JSON)
     public Automation getAutomation(@PathParam("id") int id) {
-        verifyUserAccess("automation.read");
+        verifyUserAccess("integration.automation.read");
         try {
             return db.getAutomation(id);
         } catch (Throwable t) {
@@ -58,7 +58,7 @@ public class AutomationSvc extends SCServiceBase {
     @POST
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public Automation createAutomation(Automation automation) {
-        verifyUserAccess("automation.create");
+        verifyUserAccess("integration.automation.create");
         try {
             db.create(automation);
             LOG.info("Created automation: " + automation.getId());
@@ -72,7 +72,7 @@ public class AutomationSvc extends SCServiceBase {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public Automation updateAutomation(Automation automation) {
-        verifyUserAccess("automation.update");
+        verifyUserAccess("integration.automation.update");
         try {
             db.update(automation);
             LOG.info("Edited automation: " + automation.getId());
@@ -86,7 +86,7 @@ public class AutomationSvc extends SCServiceBase {
 
     @DELETE @Path("/{id}")
     public void deleteAutomation(@PathParam("id") int id) {
-        verifyUserAccess("automation.delete");
+        verifyUserAccess("integration.automation.delete");
         if(id <= 0)
             throw new NotFoundException();
         try {

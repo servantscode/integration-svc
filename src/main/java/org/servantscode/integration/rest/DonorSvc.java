@@ -31,7 +31,7 @@ public class DonorSvc extends SCServiceBase {
                                               @QueryParam("sort_field") @DefaultValue("name") String sortField,
                                               @QueryParam("search") @DefaultValue("") String search) {
 
-        verifyUserAccess("donor.list");
+        verifyUserAccess("integration.donor.list");
         try {
             int totalPeople = db.getCount(search);
 
@@ -46,7 +46,7 @@ public class DonorSvc extends SCServiceBase {
 
     @GET @Path("/{id}") @Produces(MediaType.APPLICATION_JSON)
     public Donor getDonor(@PathParam("id") int id) {
-        verifyUserAccess("donor.read");
+        verifyUserAccess("integration.donor.read");
         try {
             return db.getDonor(id);
         } catch (Throwable t) {
@@ -58,7 +58,7 @@ public class DonorSvc extends SCServiceBase {
     @POST
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public Donor createDonor(Donor donor) {
-        verifyUserAccess("donor.create");
+        verifyUserAccess("integration.donor.create");
         try {
             db.create(donor);
             LOG.info("Created donor: " + donor.getName());
@@ -72,7 +72,7 @@ public class DonorSvc extends SCServiceBase {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public Donor updateDonor(Donor donor) {
-        verifyUserAccess("donor.update");
+        verifyUserAccess("integration.donor.update");
         try {
             db.update(donor);
             LOG.info("Edited donor: " + donor.getName());
@@ -87,7 +87,7 @@ public class DonorSvc extends SCServiceBase {
 
     @DELETE @Path("/{id}")
     public void deleteDonor(@PathParam("id") int id) {
-        verifyUserAccess("donor.delete");
+        verifyUserAccess("integration.donor.delete");
         if(id <= 0)
             throw new NotFoundException();
         try {

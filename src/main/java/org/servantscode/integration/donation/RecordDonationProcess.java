@@ -87,14 +87,6 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
             donorDb.create(donor, orgId);
         }
 
-        int familyId = donor.getFamilyId();
-        if(familyId <= 0) {
-            //TODO: Call service to look up family
-            familyId = dataReconciler.getFamilyId(personName, personEmail, personPhone);
-            donor.setFamilyId(familyId);
-        }
-
-
         IncomingDonation donation = new IncomingDonation();
         donation.setIntegrationId(integrationId);
         donation.setExternalId(payment.getPaymentToken());
@@ -105,7 +97,7 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
         donation.setDonationDate(payment.getCreatedOn());
         donation.setDonorId(donor.getId());
 
-        if(familyId > 0) {
+        if( donor.getFamilyId() > 0) {
             recorder.record(donation);
         } else {
             donationDb.create(donation, orgId);

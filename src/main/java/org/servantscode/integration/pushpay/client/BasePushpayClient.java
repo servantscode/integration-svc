@@ -12,6 +12,8 @@ import org.servantscode.commons.client.AbstractServiceClient;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 
 public abstract class BasePushpayClient extends AbstractServiceClient {
     private static final Logger LOG = LogManager.getLogger(BasePushpayClient.class);
@@ -28,6 +30,11 @@ public abstract class BasePushpayClient extends AbstractServiceClient {
     }
 
     public String login() { return null; }
+
+    @Override
+    public Map<String, String> getAdditionalHeaders() {
+        return Collections.emptyMap();
+    }
 
     protected <T> T retryRequest(Producer<T> doCall) {
         while(true) {
