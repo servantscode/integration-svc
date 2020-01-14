@@ -40,14 +40,14 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
     public void run() {
         setState(AsyncStatus.RUNNING);
         try {
-            for(PushPayPayment payment: payments) {
+            for(PushPayPayment payment: payments)
                 storePayment(payment, orgId);
-            }
 
             setState(AsyncStatus.COMPLETE);
         } catch(Throwable t) {
-            LOG.error("Failed to sync egifts: ", t);
+//            LOG.error("Failed to sync egifts: ", t);
             setFailure(t);
+            throw t;
         }
     }
 
@@ -98,7 +98,7 @@ public class RecordDonationProcess extends AsyncProcess implements Runnable {
         donation.setDonorId(donor.getId());
 
         if( donor.getFamilyId() > 0) {
-            recorder.record(donation);
+            recorder.record(donor, donation);
         } else {
             donationDb.create(donation, orgId);
         }

@@ -58,6 +58,8 @@ public class Automator extends TimerTask implements ServletContextListener {
 
     private ZonedDateTime computeNext(Automation automaton) {
         ZonedDateTime next = automaton.getNextScheduled();
+        if(next == null)
+            next = ZonedDateTime.now();
 
         switch (automaton.getCycle()) {
             case HOURLY:

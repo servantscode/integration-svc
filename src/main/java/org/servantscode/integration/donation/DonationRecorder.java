@@ -28,8 +28,10 @@ public class DonationRecorder {
     }
 
     public void record(IncomingDonation donation) {
-        Donor donor = donorDb.getDonor(donation.getDonorId());
+        this.record(donorDb.getDonor(donation.getDonorId()), donation);
+    }
 
+    public void record(Donor donor, IncomingDonation donation) {
         if(donor == null)
             throw new IllegalStateException("Cannot record a donation without donor information.");
 
